@@ -1,0 +1,53 @@
+
+
+.container{
+  display: flex;
+  flex-direction: column;
+  
+  height: calc(100vh);
+  margin:0;
+  padding:0;
+}
+
+.header{
+  height:20px;
+}
+
+.page-content{
+  display:flex;
+  flex-direction: row;
+  height: 100%;
+}
+
+.left-menu{
+  width: 300px;
+}
+
+.content{
+  width: 100%;
+  background-color:blue;
+
+  overflow: auto;
+}
+
+.designer-container{
+  position: relative;
+  background-color: coral;
+}
+
+.item{
+  position: absolute;
+  left: 20px;
+  background-color: red;
+
+  width: 200px;
+  height: 100px;
+}
+
+.item1{
+  left: 40px;
+  top: 55px;
+
+  left:1990px;
+  top: 1000px;
+}

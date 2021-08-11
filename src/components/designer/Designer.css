@@ -25,8 +25,8 @@
 
 .content{
   width: 100%;
-  background-color:blue;
-
+  background-color:darkslategrey;
+ 
   overflow: auto;
 }
 
@@ -35,19 +35,3 @@
   background-color: coral;
 }
 
-.item{
-  position: absolute;
-  left: 20px;
-  background-color: red;
-
-  width: 200px;
-  height: 100px;
-}
-
-.item1{
-  left: 40px;
-  top: 55px;
-
-  left:1990px;
-  top: 1000px;
-}

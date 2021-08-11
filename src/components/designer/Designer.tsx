@@ -7,6 +7,7 @@ multiple selection by drawing from empty space
 import React, { MouseEvent, useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react';
 import './Designer.css'
 import { Item, ItemModel } from '../item/Item'
+import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
 
 const initialItems: ItemModel[] = [
   {
@@ -48,6 +49,8 @@ export function Designer() {
   const [itemsMoving, setItemsMoving] = useState<boolean>(false);
 
   const [clickedItem, setClickedItem] = useState<ClickedItem | null>(null);
+
+  const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
 
   const onMouseMove = useCallback((event: any) => {
 
@@ -126,6 +129,13 @@ export function Designer() {
 
   const handleMouseDown = (event: MouseEvent<HTMLDivElement>) => {
 
+    setDesignerClickedEvent({
+      xInContainer: (event.nativeEvent as any).layerX,
+      yInContainer: (event.nativeEvent as any).layerY,
+      xInViewPort: event.clientX,
+      yInViewPort: event.clientY
+    });
+
     const remainingItems = items.filter(i => !i.visualState.selected);
 
     items.filter(i => i.visualState.selected).forEach(j => {
@@ -144,11 +154,15 @@ export function Designer() {
   const onItemClicked = (item: ItemModel) => {
 
     setClickedItem({ item, selected: item.visualState.selected, time: new Date() });
-    
+
     revertItemSelection(item, true)
 
     setItemsMoving(true);
   }
+
+  const handleSelectingRectangleDrawn = (location: { top: number, left: number, bottom: number, right: number }) => {
+    
+  };
 
   return (
 
@@ -169,6 +183,11 @@ export function Designer() {
             {
               items.map(item => <Item key={item.value.id} itemModel={item} onClicked={onItemClicked} />)
             }
+
+            <SelectingRectangle
+              key="selectingRect"
+              designerClicked={designerClickedEvent}
+              rectangleDrawn={handleSelectingRectangleDrawn} />
 
           </div>
         </div>

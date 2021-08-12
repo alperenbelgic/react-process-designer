@@ -1,8 +1,7 @@
-import React, { MouseEventHandler, useCallback, useEffect, useRef } from 'react';
-import { isConstructorDeclaration } from 'typescript';
+import React from 'react';
 import './Item.css'
 
-interface ViewModel {
+interface Props {
   itemModel: ItemModel,
   onClicked: (item: ItemModel) => void
 }
@@ -13,22 +12,26 @@ export interface ItemModel {
   value: ItemValue;
 }
 
-export interface ItemVisualState {
-  left: number;
-  top: number;
+export class ItemVisualState {
 
-  selected: boolean;
-  clickedTime?: Date;
+  left: number = 0;
+  top: number = 0;
+
+  selected: boolean = false;
+  clickedTime?: Date;;
 
   leftBeforeClicked?: number;
   topBeforeClicked?: number;
+
+  defaultWidth = 200;
+  defaultHeight = 100;
 }
 
 export interface ItemValue {
   id: string;
 }
 
-function _Item({ itemModel, onClicked }: ViewModel) {
+function _Item({ itemModel, onClicked }: Props) {
   const handleMouseDown = (event: any) => {
 
     event.stopPropagation();
@@ -39,7 +42,12 @@ function _Item({ itemModel, onClicked }: ViewModel) {
   return (
     <div className="item"
       onMouseDown={handleMouseDown}
-      style={{ left: itemModel.visualState.left, top: itemModel.visualState.top }}
+      style={{
+        left: itemModel.visualState.left, 
+        top: itemModel.visualState.top, 
+        width: itemModel.visualState.defaultWidth,
+        height: itemModel.visualState.defaultHeight
+      }}
     >
       {itemModel.value.id} - {itemModel.visualState.selected ? 'true' : 'false'}
     </div>

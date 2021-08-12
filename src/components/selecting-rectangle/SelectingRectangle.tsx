@@ -73,9 +73,17 @@ export function SelectingRectangle({ designerClicked, rectangleDrawn }: Props) {
 
         const onMouseUp = (event: any) => {
 
-            if (rectangleDrawing) {
+            if (rectangleDrawing) {                
+
+                rectangleDrawn({
+                    top: rectangleLocation.top,
+                    left: rectangleLocation.left,
+                    bottom: rectangleLocation.top + rectangleLocation.height,
+                    right: rectangleLocation.left + rectangleLocation.width
+                });
 
                 setRectangleDrawing(false);
+
                 setRectangleLocation({ height: 0, top: 0, left: -1000, width: 0 });
             }
         };
@@ -86,7 +94,7 @@ export function SelectingRectangle({ designerClicked, rectangleDrawn }: Props) {
             document.removeEventListener('mouseup', onMouseUp)
         };
 
-    }, [rectangleDrawing]);
+    }, [rectangleDrawing, rectangleDrawn, rectangleLocation.height, rectangleLocation.left, rectangleLocation.top, rectangleLocation.width]);
 
 
     if (rectangleDrawing) {

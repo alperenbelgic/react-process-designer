@@ -3,6 +3,7 @@ import './Designer.css'
 import { Item, ItemModel, ItemVisualState } from '../item/Item'
 import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
 import { MouseDragContext } from '../../contexts/MouseDragService';
+import { Link, LinkModel } from '../link/Link';
 
 
 const initialItems: ItemModel[] = [
@@ -237,6 +238,10 @@ export function Designer() {
     });
   };
 
+  const linkModel: LinkModel = {
+    start: { x: 30, y: 50 },
+    end: { x: 230, y: 250},
+  }
 
   return (
 
@@ -257,6 +262,8 @@ export function Designer() {
             {
               items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
             }
+
+            <Link linkModel={linkModel} />
 
             <SelectingRectangle
               key="selectingRect"

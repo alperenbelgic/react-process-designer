@@ -8,11 +8,11 @@ export interface DesignerClickedEventArgs {
     yInViewPort: number;
 }
 
-interface RectLocation {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
+class RectLocation {
+    left = -1000;
+    top = -1000;
+    width = 0;
+    height = 0;
 }
 
 interface Props {
@@ -27,7 +27,7 @@ export function SelectingRectangle({ designerClicked, rectangleDrawn }: Props) {
 
     const [designerClickedState, setDesignerClickedState] = useState<DesignerClickedEventArgs | null>(null);
 
-    const [rectangleLocation, setRectangleLocation] = useState<RectLocation>({} as RectLocation);
+    const [rectangleLocation, setRectangleLocation] = useState<RectLocation>({ left: -1000, top: -1000, height: 0, width: 0 });
 
     if (designerClicked !== designerClickedState) {
         setRectangleDrawing(true);
@@ -73,7 +73,7 @@ export function SelectingRectangle({ designerClicked, rectangleDrawn }: Props) {
 
         const onMouseUp = (event: any) => {
 
-            if (rectangleDrawing) {                
+            if (rectangleDrawing) {
 
                 rectangleDrawn({
                     top: rectangleLocation.top,
@@ -84,7 +84,7 @@ export function SelectingRectangle({ designerClicked, rectangleDrawn }: Props) {
 
                 setRectangleDrawing(false);
 
-                setRectangleLocation({ height: 0, top: 0, left: -1000, width: 0 });
+                setRectangleLocation({ height: 0, top: -1000, left: -1000, width: 0 });
             }
         };
 

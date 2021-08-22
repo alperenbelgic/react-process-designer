@@ -12,6 +12,8 @@ export class MouseDragService {
     private shiftY: number = 0;
     private mouseEventHandler?: MouseEventHandler;
 
+    private draggingStarted: Date = new Date();
+
 
     private mouseMoveBoundMethod: any;
 
@@ -27,6 +29,8 @@ export class MouseDragService {
         initialClientX: number,
         initialClientY: number,
         mouseEventHandler: MouseEventHandler) {
+
+        this.draggingStarted = new Date();
 
         document.addEventListener('mousemove', this.mouseMoveBoundMethod);
 
@@ -44,7 +48,7 @@ export class MouseDragService {
 
 
     private handleMouseMove(event: any) {
-        
+
         if (this.mouseEventHandler) {
 
             this.shiftX = event.clientX - this.initialClientX;
@@ -62,14 +66,17 @@ export class MouseDragService {
 
         document.removeEventListener('mousemove', this.mouseMoveBoundMethod);
 
-        this.mouseEventHandler?.onMouseUp();
+
+        const canceled = 300 > (new Date()).getTime() - this.draggingStarted.getTime();
+        this.mouseEventHandler?.onMouseUp(canceled);
+
         this.mouseEventHandler = undefined;
     }
 }
 
 export interface MouseEventHandler {
     onMouseMoved: (x: number, y: number, shiftX: number, shiftY: number) => void;
-    onMouseUp: () => void;
+    onMouseUp: (draggingCanceled: boolean) => void;
 }
 
 export const mouseDragService = new MouseDragService();

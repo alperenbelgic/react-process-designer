@@ -1,3 +1,6 @@
+import React from 'react';
+import { useCallback } from 'react';
+import { ItemModel } from '../item/Item';
 import './Link.css'
 
 export interface Point {
@@ -8,6 +11,7 @@ export interface Point {
 export interface LinkModel {
     start: Point;
     end: Point;
+    id?: string;
 }
 
 interface Props {
@@ -47,13 +51,52 @@ function hypot(linkModel: LinkModel) {
 
 function arctan(linkModel: LinkModel) {
 
-    const xDiff = Math.abs(linkModel.start.x - linkModel.end.x);
-    const yDiff = Math.abs(linkModel.start.y - linkModel.end.y);
+    const xDiff = (linkModel.end.x - linkModel.start.x);
+    const yDiff = (linkModel.end.y - linkModel.start.y);
 
-    return Math.atan2(-yDiff, xDiff);
+    return Math.atan2(yDiff, xDiff);
 }
 
-export function Link({ linkModel }: Props) {
+
+const getCenterOfItem = (item: ItemModel): Point => {
+    return {
+      x: item.visualState.left + item.visualState.defaultWidth / 2,
+      y: item.visualState.top + item.visualState.defaultHeight / 2
+    };
+  }
+  
+  export const getLinks = (items: ItemModel[]): LinkModel[] => {
+  
+    const linkModels: LinkModel[] = [];
+  
+    let itemsInObject: any = {};
+  
+    // to keep in O(n)
+    items.forEach(item => {
+      itemsInObject[item.value.id] = item;
+    });
+  
+    items.forEach(item => {
+      item.value.linkedItems.forEach(linkedItem => {
+        const toItem = itemsInObject[linkedItem];
+  
+        // calculate centers and create a LinkModel object.
+        const firstItemsCenter = getCenterOfItem(item);
+        const secondItemsCenter = getCenterOfItem(toItem);
+  
+        linkModels.push({
+          start: firstItemsCenter,
+          end: secondItemsCenter,
+          id: item.value.id + '_' + toItem.value.id
+        });
+      });
+    })
+  
+    return linkModels;
+  }
+  
+
+ function _Link({ linkModel }: Props) {
     const width = 10;
     const height = hypot(linkModel);
 
@@ -61,12 +104,21 @@ export function Link({ linkModel }: Props) {
     const left = center.x - width / 2;
     const top = center.y - height / 2;
 
-    const rotation = arctan(linkModel);
+    const rotation = arctan(linkModel) + Math.PI / 2;
 
     const transform = `rotate(${rotation}rad)`
+
+    const onMouseDown = useCallback((event: any) => {
+
+        event.stopPropagation();
+    }, []);
 
     return <div
         className="link"
         style={{ width, height, top, left, transform }}
+        onMouseDown={onMouseDown}
     ></div>
 }
+
+export const Link = React.memo(_Link);
+    

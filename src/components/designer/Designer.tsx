@@ -1,10 +1,9 @@
-import React, { MouseEvent, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
+import React, { MouseEvent, useCallback, useContext, useLayoutEffect, useState } from 'react';
 import './Designer.css'
 import { Item, ItemModel, ItemVisualState } from '../item/Item'
 import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
 import { MouseDragContext } from '../../contexts/MouseDragService';
-import { Link, LinkModel } from '../link/Link';
-
+import { Link, getLinks } from '../link/Link';
 
 const initialItems: ItemModel[] = [
   {
@@ -14,7 +13,7 @@ const initialItems: ItemModel[] = [
         top: 50,
         selected: true
       }),
-    value: { id: '1' }
+    value: { id: '1', linkedItems: ['2'] }
   },
   {
     visualState: Object.assign(new ItemVisualState(),
@@ -23,41 +22,47 @@ const initialItems: ItemModel[] = [
         top: 250,
         selected: true
       }),
-    value: { id: '2' }
+    value: { id: '2', linkedItems: ['3'] }
   },
   {
     visualState: Object.assign(new ItemVisualState(),
       {
-        left: 630,
-        top: 250,
+        left: 530,
+        top: 450,
         selected: true
       }),
-    value: { id: '3' }
+    value: { id: '3', linkedItems: [] }
   },
 ];
 
-interface ClickedItem {
-  item: ItemModel,
-  selected: boolean,
-  time: Date
+function itemsLeftView(items: ItemModel[]) {
+  return items.some(i => i.visualState.left < 0 || i.visualState.top < 0);
 }
-
-
 
 export function Designer() {
 
   const [items, setItems] = useState<ItemModel[]>(initialItems);
 
-  const [clickedItem, setClickedItem] = useState<ClickedItem | null>(null);
-
   const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
 
-
-  const revertItemSelection = useCallback((item: ItemModel, setSelectionTo?: boolean) => {
+  const revertItemSelection = useCallback((item: ItemModel, setSelectionTo?: boolean, ctrl?: boolean) => {
     setItems((items) => {
 
-      const remainingItems = items.filter(i => i.value.id !== item.value.id);
+      let remainingItems = items.filter(i => i.value.id !== item.value.id);
       const itemInList = items.find(i => i.value.id === item.value.id) ?? {} as ItemModel;
+
+      if (!ctrl) {
+        // make them all others unselected
+        remainingItems = remainingItems.map((i: ItemModel) => {
+          return {
+            ...i,
+            visualState: Object.assign(new ItemVisualState(), {
+              ...i.visualState,
+              selected: false
+            })
+          }
+        });
+      }
 
       remainingItems.push({
         ...itemInList,
@@ -71,35 +76,13 @@ export function Designer() {
     });
   }, []);
 
-  const onMouseUp = useCallback((event: any) => {
-
-    if (clickedItem) {
-      const diff = (new Date()).getTime() - clickedItem.time.getTime();
-
-      if (diff < 300) {
-        revertItemSelection(clickedItem.item, !clickedItem.selected);
-      }
-
-      setClickedItem(null);
-    }
-
-  }, [clickedItem, revertItemSelection]);
-
-  useLayoutEffect(() => {
-    document.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      document.removeEventListener('mouseup', onMouseUp)
-    };
-
-  }, [onMouseUp]);
-
   const handleMouseDown = useCallback((event: MouseEvent<HTMLDivElement>) => {
 
     setItems(_items => {
+
       setDesignerClickedEvent({
-        xInContainer: (event.nativeEvent as any).layerX,
-        yInContainer: (event.nativeEvent as any).layerY,
+        xInContainer: (event.nativeEvent as any).offsetX,
+        yInContainer: (event.nativeEvent as any).offsetY,
         xInViewPort: event.clientX,
         yInViewPort: event.clientY
       });
@@ -148,16 +131,30 @@ export function Designer() {
   }, []);
 
 
-  const handleItemDraggingEnded = useCallback(() => {
+  const handleItemDraggingEnded = useCallback((canceled) => {
 
     setItems(_items => {
 
       const moving = _items.filter(i => i.visualState.dragging);
       const remaining = _items.filter(i => !i.visualState.dragging);
 
+      canceled = canceled || itemsLeftView(moving);
+
       moving.forEach(i => {
 
-        i.visualState.includeShift();
+        if (canceled) {
+          i.visualState.xShift = i.visualState.yShift = 0;
+        }
+        else {
+          i.visualState.includeShift();
+        }
+      });
+
+      if (!canceled) {
+        placeItemsInHorizontalLine(moving);
+      }
+
+      moving.forEach(i => {
 
         remaining.push({
           ...i,
@@ -177,11 +174,13 @@ export function Designer() {
 
   const handleItemClicked =
     useCallback(
-      (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number) => {
+      (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number, ctrl: boolean) => {
 
-        revertItemSelection(item, true)
+        const isItemSelectedBeforeClick = item.visualState.selected;
 
-        setClickedItem({ item, selected: item.visualState.selected, time: new Date() });
+        if (!isItemSelectedBeforeClick) {
+          revertItemSelection(item, true, ctrl);
+        }
 
         mouseDragContext.startDragging(relativeY, relativeY, clientX, clientY, {
 
@@ -190,12 +189,25 @@ export function Designer() {
             handleItemsDragging(shiftX, shiftY);
 
           },
-          onMouseUp: () => {
+          onMouseUp: (canceled: boolean) => {
 
-            handleItemDraggingEnded();
+            if (canceled) {
+
+              if (!ctrl && isItemSelectedBeforeClick && items.filter(i => i.visualState.selected).length > 1) {
+                // there are other selected items and we click a selected one
+                // in this case (I think) we keep only clicked one selected
+                // instead of making them all unselected
+                // I just feel like this :)
+                revertItemSelection(item, true, false);
+              }
+              else {
+                revertItemSelection(item, !isItemSelectedBeforeClick, ctrl);
+              }
+            }
+
+            handleItemDraggingEnded(canceled);
           }
         });
-
 
       }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, revertItemSelection]);
 
@@ -238,10 +250,7 @@ export function Designer() {
     });
   };
 
-  const linkModel: LinkModel = {
-    start: { x: 30, y: 50 },
-    end: { x: 230, y: 250},
-  }
+  const links = useCallback(() => getLinks(items), [items]);
 
   return (
 
@@ -257,13 +266,18 @@ export function Designer() {
           left menu
         </div>
         <div id="content" className="content" onMouseDown={handleMouseDown} >
+
+          {/* this (positon:relative) div is for providing 
+          an immediate non static parent for absolute positioned children*/}
           <div className="designer-container">
+
+            {
+              links().map(link => <Link linkModel={link} key={link.id} />)
+            }
 
             {
               items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
             }
-
-            <Link linkModel={linkModel} />
 
             <SelectingRectangle
               key="selectingRect"
@@ -279,3 +293,27 @@ export function Designer() {
 
   );
 }
+
+function placeItemsInHorizontalLine(moving: ItemModel[]) {
+  moving.forEach(i => {
+
+    console.log('top', i.visualState.top)
+
+    const mod = (i.visualState.top - 17) % 140;
+    console.log('mod', mod)
+
+    if (mod === 0) return;
+
+    if (mod < 70) {
+      i.visualState.top -= mod;
+    }
+    else {
+      i.visualState.top += (140 - mod);
+    }
+
+    console.log('final top', i.visualState.top)
+
+  })
+
+}
+

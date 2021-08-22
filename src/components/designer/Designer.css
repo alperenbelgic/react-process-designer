@@ -24,10 +24,13 @@
 }
 
 .content{
-  width: 100%;
-  background-color:darkslategrey;
- 
+  width: 100%; 
   overflow: auto;
+
+  background: linear-gradient(0deg, gray 1%, transparent 0%);
+  background-size: 1px 140px;
+  background-color: darkslategrey;
+  background-attachment: local;
 }
 
 .designer-container{

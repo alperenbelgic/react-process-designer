@@ -3,7 +3,7 @@ import './Item.css'
 
 interface Props {
   itemModel: ItemModel,
-  onClicked: (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number) => void
+  onClicked: (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number, ctrl: boolean) => void
 }
 
 export interface ItemModel {
@@ -24,7 +24,7 @@ export class ItemVisualState {
   set top(value: number) { this._top = value; }
 
   selected: boolean = false;
-  clickedTime?: Date;;
+  clickedTime?: Date;
 
   leftBeforeClicked?: number;
   topBeforeClicked?: number;
@@ -47,6 +47,7 @@ export class ItemVisualState {
 
 export interface ItemValue {
   id: string;
+  linkedItems: string[];
 }
 
 function _Item({ itemModel, onClicked }: Props) {
@@ -62,7 +63,7 @@ function _Item({ itemModel, onClicked }: Props) {
     const clientX = event.clientX;
     const clientY = event.clientY;
 
-    onClicked(itemModel, relativeX, relativeY, clientX, clientY);
+    onClicked(itemModel, relativeX, relativeY, clientX, clientY, event.ctrlKey);
 
   }, [itemModel, onClicked]);
 
@@ -73,7 +74,8 @@ function _Item({ itemModel, onClicked }: Props) {
         left: itemModel.visualState.left,
         top: itemModel.visualState.top,
         width: itemModel.visualState.defaultWidth,
-        height: itemModel.visualState.defaultHeight
+        height: itemModel.visualState.defaultHeight,
+        borderColor: itemModel.visualState.selected ? 'black' : 'transparent'
       }}
     >
       {itemModel.value.id} - {itemModel.visualState.selected ? 'true' : 'false'} {itemModel.visualState.left} - {itemModel.visualState.top} - {itemModel.visualState.xShift} - {itemModel.visualState.yShift} -

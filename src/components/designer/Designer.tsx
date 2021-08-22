@@ -1,4 +1,4 @@
-import React, { MouseEvent, useCallback, useContext, useLayoutEffect, useState } from 'react';
+import React, { MouseEvent, useCallback, useContext, useLayoutEffect, useReducer, useState } from 'react';
 import './Designer.css'
 import { Item, ItemModel, ItemVisualState } from '../item/Item'
 import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
@@ -55,21 +55,25 @@ function placeItemsInHorizontalLine(moving: ItemModel[]) {
   })
 }
 
+type DesignerAction =
+  | { type: 'revert-item-selection', item: ItemModel, setSelectionTo?: boolean, ctrl?: boolean }
+  | { type: 'unselect-all' }
+  | { type: 'handle-items-dragging', shiftX: number, shiftY: number }
+  | { type: 'handle-items-dragging-ended', canceled: boolean }
+  | { type: 'handle-selecting-rectangle-drawn', selectionLocation: { top: number, left: number, bottom: number, right: number } }
 
+interface DesignerState {
+  items: ItemModel[];
+}
 
-export function Designer() {
+const DesignerReducer = (state: DesignerState, action: DesignerAction): DesignerState => {
+  switch (action.type) {
+    case 'revert-item-selection': {
 
-  const [items, setItems] = useState<ItemModel[]>(initialItems);
+      let remainingItems = state.items.filter(i => i.value.id !== action.item.value.id);
+      const itemInList = state.items.find(i => i.value.id === action.item.value.id) ?? {} as ItemModel;
 
-  const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
-
-  const revertItemSelection = useCallback((item: ItemModel, setSelectionTo?: boolean, ctrl?: boolean) => {
-    setItems((items) => {
-
-      let remainingItems = items.filter(i => i.value.id !== item.value.id);
-      const itemInList = items.find(i => i.value.id === item.value.id) ?? {} as ItemModel;
-
-      if (!ctrl) {
+      if (!action.ctrl) {
         // make them all others unselected
         remainingItems = remainingItems.map((i: ItemModel) => {
           return {
@@ -86,28 +90,19 @@ export function Designer() {
         ...itemInList,
         visualState: Object.assign(new ItemVisualState(), {
           ...itemInList.visualState,
-          selected: setSelectionTo ?? !itemInList?.visualState.selected
+          selected: action.setSelectionTo ?? !itemInList?.visualState.selected
         })
       });
 
-      return remainingItems;
-    });
-  }, []);
+      return {
+        ...state,
+        items: remainingItems
+      };
+    }
+    case 'unselect-all': {
+      const remainingItems = state.items.filter(i => !i.visualState.selected);
 
-  const handleMouseDown = useCallback((event: MouseEvent<HTMLDivElement>) => {
-
-    setItems(_items => {
-
-      setDesignerClickedEvent({
-        xInContainer: (event.nativeEvent as any).offsetX,
-        yInContainer: (event.nativeEvent as any).offsetY,
-        xInViewPort: event.clientX,
-        yInViewPort: event.clientY
-      });
-
-      const remainingItems = _items.filter(i => !i.visualState.selected);
-
-      _items.filter(i => i.visualState.selected).forEach(j => {
+      state.items.filter(i => i.visualState.selected).forEach(j => {
         remainingItems.push({
           ...j,
           visualState: Object.assign(new ItemVisualState(),
@@ -118,45 +113,35 @@ export function Designer() {
         })
       })
 
-      return remainingItems;
+      return { ...state, items: remainingItems };
+    }
+    case 'handle-items-dragging': {
 
-    });
-  }, []);
-
-  const handleItemsDragging = useCallback((shiftX: number, shiftY: number) => {
-
-    setItems(_items => {
-
-      const selected = _items.filter(i => i.visualState.selected);
-      const remaining = _items.filter(i => !i.visualState.selected)
+      const selected = state.items.filter(i => i.visualState.selected);
+      const remaining = state.items.filter(i => !i.visualState.selected)
 
       selected.forEach(i => {
         remaining.push({
           ...i,
           visualState: Object.assign(new ItemVisualState(), {
             ...i.visualState,
-            xShift: shiftX,
-            yShift: shiftY,
+            xShift: action.shiftX,
+            yShift: action.shiftY,
             dragging: true
           })
         })
       });
 
-      return remaining;
-    });
+      return {
+        ...state,
+        items: remaining
+      };
+    }
+    case 'handle-items-dragging-ended': {
+      const moving = state.items.filter(i => i.visualState.dragging);
+      const remaining = state.items.filter(i => !i.visualState.dragging);
 
-
-  }, []);
-
-
-  const handleItemDraggingEnded = useCallback((canceled) => {
-
-    setItems(_items => {
-
-      const moving = _items.filter(i => i.visualState.dragging);
-      const remaining = _items.filter(i => !i.visualState.dragging);
-
-      canceled = canceled || itemsLeftView(moving);
+      const canceled = action.canceled || itemsLeftView(moving);
 
       moving.forEach(i => {
 
@@ -183,68 +168,22 @@ export function Designer() {
         })
       });
 
-      return remaining;
-    });
-
-  }, []);
-
-  const mouseDragContext = useContext(MouseDragContext);
-
-  const handleItemClicked =
-    useCallback(
-      (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number, ctrl: boolean) => {
-
-        const isItemSelectedBeforeClick = item.visualState.selected;
-
-        if (!isItemSelectedBeforeClick) {
-          revertItemSelection(item, true, ctrl);
-        }
-
-        mouseDragContext.startDragging(relativeY, relativeY, clientX, clientY, {
-
-          onMouseMoved: (x, y, shiftX, shiftY) => {
-
-            handleItemsDragging(shiftX, shiftY);
-
-          },
-          onMouseUp: (canceled: boolean) => {
-
-            if (canceled) {
-
-              if (!ctrl && isItemSelectedBeforeClick && items.filter(i => i.visualState.selected).length > 1) {
-                // there are other selected items and we click a selected one
-                // in this case (I think) we keep only clicked one selected
-                // instead of making them all unselected
-                // I just feel like this :)
-                revertItemSelection(item, true, false);
-              }
-              else {
-                revertItemSelection(item, !isItemSelectedBeforeClick, ctrl);
-              }
-            }
-
-            handleItemDraggingEnded(canceled);
-          }
-        });
-
-      }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, revertItemSelection, items]);
-
-  const handleSelectingRectangleDrawn = (selectionLocation: { top: number, left: number, bottom: number, right: number }) => {
-
-    setItems((_items) => {
+      return { ...state, items: remaining };
+    }
+    case 'handle-selecting-rectangle-drawn': {
       const _selectedItems: ItemModel[] = [];
       const _remainingItems: ItemModel[] = [];
 
-      _items.forEach(i => {
+      state.items.forEach(i => {
         const itemTop = i.visualState.top;
         const itemLeft = i.visualState.left;
         const itemRight = i.visualState.left + i.visualState.defaultWidth;
         const itemBottom = i.visualState.top + i.visualState.defaultHeight;
 
-        if (itemTop > selectionLocation.bottom ||
-          selectionLocation.top > itemBottom ||
-          itemRight < selectionLocation.left ||
-          selectionLocation.right < itemLeft) {
+        if (itemTop > action.selectionLocation.bottom ||
+          action.selectionLocation.top > itemBottom ||
+          itemRight < action.selectionLocation.left ||
+          action.selectionLocation.right < itemLeft) {
 
           _remainingItems.push(i);
         }
@@ -264,11 +203,96 @@ export function Designer() {
         })
       });
 
-      return _remainingItems;
+      return { ...state, items: _remainingItems };
+    }
+  }
+}
+
+class DesignerDispatchers {
+
+}
+
+export function Designer() {
+
+  const [state, dispatch] = useReducer(DesignerReducer, { items: initialItems })
+
+  const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
+
+  const handleMouseDown = useCallback((event: MouseEvent<HTMLDivElement>) => {
+
+    setDesignerClickedEvent({
+      xInContainer: (event.nativeEvent as any).offsetX,
+      yInContainer: (event.nativeEvent as any).offsetY,
+      xInViewPort: event.clientX,
+      yInViewPort: event.clientY
     });
+
+    dispatch({ type: 'unselect-all' });
+
+  }, []);
+
+  const handleItemsDragging = useCallback((shiftX: number, shiftY: number) => {
+
+    dispatch({ type: 'handle-items-dragging', shiftX, shiftY });
+
+  }, []);
+
+  const handleItemDraggingEnded = useCallback((canceled) => {
+
+    dispatch({ type: 'handle-items-dragging-ended', canceled })
+
+  }, []);
+
+  const mouseDragContext = useContext(MouseDragContext);
+
+  const handleItemClicked =
+    useCallback(
+      (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number, ctrl: boolean) => {
+
+        const isItemSelectedBeforeClick = item.visualState.selected;
+
+        if (!isItemSelectedBeforeClick) {
+          dispatch({ type: 'revert-item-selection', item, setSelectionTo: true, ctrl: ctrl });
+        }
+
+        mouseDragContext.startDragging(relativeY, relativeY, clientX, clientY, {
+
+          onMouseMoved: (x, y, shiftX, shiftY) => {
+
+            handleItemsDragging(shiftX, shiftY);
+
+          },
+          onMouseUp: (canceled: boolean) => {
+
+            if (canceled) {
+
+              if (!ctrl && isItemSelectedBeforeClick && state.items.filter(i => i.visualState.selected).length > 1) {
+                // there are other selected items and we click a selected one
+                // in this case (I think) we keep only clicked one selected
+                // instead of making them all unselected
+                // I just feel like this :)
+                // revertItemSelection(item, true, false);
+                dispatch({ type: 'revert-item-selection', item, setSelectionTo: true, ctrl: false })
+
+              }
+              else {
+                dispatch({ type: 'revert-item-selection', item, setSelectionTo: !isItemSelectedBeforeClick, ctrl: ctrl });
+              }
+            }
+
+            handleItemDraggingEnded(canceled);
+          }
+        });
+
+      }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, state.items]);
+
+  const handleSelectingRectangleDrawn = (selectionLocation: { top: number, left: number, bottom: number, right: number }) => {
+
+    dispatch({ type: 'handle-selecting-rectangle-drawn', selectionLocation });
+    
   };
 
-  const links = useCallback(() => getLinks(items), [items]);
+  const links = useCallback(() => getLinks(state.items), [state.items]);
 
   return (
 
@@ -299,7 +323,7 @@ export function Designer() {
             }
 
             {
-              items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
+              state.items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
             }
 
             <SelectingRectangle

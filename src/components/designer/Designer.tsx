@@ -10,7 +10,7 @@ const initialItems: ItemModel[] = [
     visualState: Object.assign(new ItemVisualState(),
       {
         left: 30,
-        top: 50,
+        top: 17,
         selected: true
       }),
     value: { id: '1', linkedItems: ['2'] }
@@ -19,7 +19,7 @@ const initialItems: ItemModel[] = [
     visualState: Object.assign(new ItemVisualState(),
       {
         left: 230,
-        top: 250,
+        top: 297,
         selected: true
       }),
     value: { id: '2', linkedItems: ['3'] }
@@ -28,7 +28,7 @@ const initialItems: ItemModel[] = [
     visualState: Object.assign(new ItemVisualState(),
       {
         left: 530,
-        top: 450,
+        top: 437,
         selected: true
       }),
     value: { id: '3', linkedItems: [] }
@@ -38,6 +38,24 @@ const initialItems: ItemModel[] = [
 function itemsLeftView(items: ItemModel[]) {
   return items.some(i => i.visualState.left < 0 || i.visualState.top < 0);
 }
+
+function placeItemsInHorizontalLine(moving: ItemModel[]) {
+  moving.forEach(i => {
+
+    const mod = (i.visualState.top - 17) % 140;
+
+    if (mod === 0) return;
+
+    if (mod < 70) {
+      i.visualState.top -= mod;
+    }
+    else {
+      i.visualState.top += (140 - mod);
+    }
+  })
+}
+
+
 
 export function Designer() {
 
@@ -209,7 +227,7 @@ export function Designer() {
           }
         });
 
-      }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, revertItemSelection]);
+      }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, revertItemSelection, items]);
 
   const handleSelectingRectangleDrawn = (selectionLocation: { top: number, left: number, bottom: number, right: number }) => {
 
@@ -263,7 +281,12 @@ export function Designer() {
       <div className="page-content">
 
         <div className="left-menu">
-          left menu
+          <div className="menu-container" >
+
+          </div>
+          <div className="button-container" >
+            <button>Save</button>
+          </div>
         </div>
         <div id="content" className="content" onMouseDown={handleMouseDown} >
 
@@ -292,28 +315,5 @@ export function Designer() {
     </div>
 
   );
-}
-
-function placeItemsInHorizontalLine(moving: ItemModel[]) {
-  moving.forEach(i => {
-
-    console.log('top', i.visualState.top)
-
-    const mod = (i.visualState.top - 17) % 140;
-    console.log('mod', mod)
-
-    if (mod === 0) return;
-
-    if (mod < 70) {
-      i.visualState.top -= mod;
-    }
-    else {
-      i.visualState.top += (140 - mod);
-    }
-
-    console.log('final top', i.visualState.top)
-
-  })
-
 }
 

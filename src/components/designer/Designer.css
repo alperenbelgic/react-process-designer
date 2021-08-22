@@ -38,3 +38,24 @@
   background-color: coral;
 }
 
+.left-menu{
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-container{
+  background-color: whitesmoke;
+  flex-grow: 1;
+}
+
+.button-container{
+  padding: 0 20px 60px 20px;
+}
+
+.button-container button{
+  width: 100%;
+  background-color: cornflowerblue;
+  border: 1px solid black;
+  height: 40px;
+  border-radius: 1px;
+}

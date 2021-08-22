@@ -1,0 +1,28 @@
+
+.context-menu{
+    position: absolute;
+    top: 0px;
+    left: 204px;
+    background-color: transparent;
+    
+    width: 90px;
+    height: 70px;
+    border: 4px solid transparent;
+  
+    display: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+  
+  }
+  
+  .item:hover .context-menu{
+    display: flex;
+  }
+  
+  .context-button{
+    display: inline-block;
+    width: 25px;
+    height: 25px;
+    margin: 5px;
+    background-color: white;
+  }

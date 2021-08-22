@@ -67,7 +67,12 @@ export class MouseDragService {
         document.removeEventListener('mousemove', this.mouseMoveBoundMethod);
 
 
-        const canceled = 300 > (new Date()).getTime() - this.draggingStarted.getTime();
+        let canceled = 300 > (new Date()).getTime() - this.draggingStarted.getTime();
+
+        // if location shift is more than, let's say, 50px, don't cancel
+        // it might be a very quick intentional movement.
+        canceled = (Math.hypot(this.shiftX, this.shiftY) > 50) ? false : canceled;
+
         this.mouseEventHandler?.onMouseUp(canceled);
 
         this.mouseEventHandler = undefined;

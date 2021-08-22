@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { ContextMenu } from '../context-menu/ContextMenu';
 import './Item.css'
 
 interface Props {
@@ -78,7 +79,12 @@ function _Item({ itemModel, onClicked }: Props) {
         borderColor: itemModel.visualState.selected ? 'black' : 'transparent'
       }}
     >
-      {itemModel.value.id} - {itemModel.visualState.selected ? 'true' : 'false'} {itemModel.visualState.left} - {itemModel.visualState.top} - {itemModel.visualState.xShift} - {itemModel.visualState.yShift} -
+      <div>
+        {itemModel.value.id} - {itemModel.visualState.selected ? 'true' : 'false'} {itemModel.visualState.left} - {itemModel.visualState.top} - {itemModel.visualState.xShift} - {itemModel.visualState.yShift} -
+      </div>
+
+      <ContextMenu />
+
     </div>
   );
 }

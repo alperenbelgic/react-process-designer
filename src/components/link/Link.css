@@ -1,6 +1,27 @@
 .link{
-    background-color: rebeccapurple;
+    background-color: darkgray;
 
      position: absolute;
 
+     display: flex;
+     flex-direction: column;
+     justify-content: space-around;
+     user-select: none;
+
 }
+
+.link div{
+    font-weight: bold;
+    margin-left: -3px;
+    font-size: 21px;
+    color: dimgrey;
+}
+
+
+/* .temp-joint{
+    position: absolute;
+    background-color: chartreuse;
+    width: 20px;
+    height: 20px;
+    border-radius: 20px;
+} */

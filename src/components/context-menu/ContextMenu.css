@@ -15,7 +15,7 @@
   
   }
   
-  .item:hover .context-menu{
+  .activity-item:hover .context-menu{
     display: flex;
   }
   

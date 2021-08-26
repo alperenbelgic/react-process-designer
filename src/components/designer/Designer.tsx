@@ -1,4 +1,4 @@
-import React, { MouseEvent, useCallback, useContext, useLayoutEffect, useReducer, useState } from 'react';
+import { MouseEvent, useCallback, useContext, useReducer, useState } from 'react';
 import './Designer.css'
 import { Item, ItemModel, ItemVisualState } from '../item/Item'
 import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
@@ -7,31 +7,58 @@ import { Link, getLinks } from '../link/Link';
 
 const initialItems: ItemModel[] = [
   {
+    itemType: 'Activity',
     visualState: Object.assign(new ItemVisualState(),
       {
         left: 30,
-        top: 17,
+        top: 297,
         selected: true
       }),
     value: { id: '1', linkedItems: ['2'] }
   },
   {
+    itemType: 'Activity',
     visualState: Object.assign(new ItemVisualState(),
       {
-        left: 230,
+        left: 330,
         top: 297,
         selected: true
       }),
     value: { id: '2', linkedItems: ['3'] }
   },
   {
+    itemType: 'Activity',
     visualState: Object.assign(new ItemVisualState(),
       {
-        left: 530,
-        top: 437,
+        left: 630,
+        top: 297,
         selected: true
       }),
-    value: { id: '3', linkedItems: [] }
+    value: { id: '3', linkedItems: ['4'] }
+  },
+  {
+    itemType: 'Joint',
+    visualState: Object.assign(new ItemVisualState(),
+      {
+        left: 715,
+        top: 191,
+        selected: true,
+        defaultWidth: 30,
+        defaultHeight: 30
+      }),
+    value: { id: '4', linkedItems: ['5'] }
+  },
+  {
+    itemType: 'Joint',
+    visualState: Object.assign(new ItemVisualState(),
+      {
+        left: 115,
+        top: 191,
+        selected: true,
+        defaultWidth: 30,
+        defaultHeight: 30
+      }),
+    value: { id: '5', linkedItems: ['1'] }
   },
 ];
 
@@ -39,20 +66,110 @@ function itemsLeftView(items: ItemModel[]) {
   return items.some(i => i.visualState.left < 0 || i.visualState.top < 0);
 }
 
-function placeItemsInHorizontalLine(moving: ItemModel[]) {
-  moving.forEach(i => {
+function placeItemInHorizontalLine(i: ItemModel) {
+  const laneHeight = 140;
 
-    const mod = (i.visualState.top - 17) % 140;
+  if (i.itemType === 'Activity') {
+
+    const mod = (i.visualState.top - 17) % laneHeight;
 
     if (mod === 0) return;
 
-    if (mod < 70) {
+    if (mod < (laneHeight / 2)) {
       i.visualState.top -= mod;
     }
     else {
-      i.visualState.top += (140 - mod);
+      i.visualState.top += (laneHeight - mod);
     }
+  }
+
+  if (i.itemType === 'Joint') {
+
+    const mod = (i.visualState.top - 51) % (laneHeight / 2);
+
+    if (mod === 0) return;
+
+    if (mod < (laneHeight / 4)) {
+      i.visualState.top -= mod;
+    }
+    else {
+      i.visualState.top += ((laneHeight / 2) - mod);
+    }
+  }
+}
+
+function placeItemsInHorizontalLine(moving: ItemModel[]) {
+  moving.forEach(i => {
+    placeItemInHorizontalLine(i);
   })
+}
+
+function placeItemsInVerticalLine(movingItems: ItemModel[], standingItems: ItemModel[]) {
+
+  // if a connected item is vertically closer than, let's say, 100px, align them on the same line.  
+
+  // map objects are to prevent O(n^2) loops
+  let standingIdObjectMap: {
+    [key: string]: ItemModel
+  } = {};
+  let invertedLinksOfStandingItems: {
+    [id: string]: ItemModel[]
+  } = {};
+
+  standingItems.forEach(standingItem => {
+    standingIdObjectMap[standingItem.value.id] = standingItem;
+
+    standingItem.value.linkedItems.forEach(linkedItem => {
+      if (invertedLinksOfStandingItems[linkedItem] === undefined) {
+        invertedLinksOfStandingItems[linkedItem] = [standingItem];
+      }
+      else {
+        invertedLinksOfStandingItems[linkedItem].push(standingItem);
+      }
+    });
+  });
+
+  movingItems.forEach(movingItem => {
+    let newCenterForMovingItem: number | null = null;
+
+    // links from moving item to standing item
+    movingItem.value.linkedItems.forEach(li => {
+
+      const linkedStandingItem = standingIdObjectMap[li];
+
+      if (!linkedStandingItem) return;
+
+      const verticalGap = Math.abs(movingItem.visualState.getVCenter() - linkedStandingItem.visualState.getVCenter());
+
+      if (verticalGap < 100) {
+        const gapFromAnotherLinkedItem = Math.abs(movingItem.visualState.getVCenter() - (newCenterForMovingItem ?? Number.MAX_SAFE_INTEGER));
+
+        if (verticalGap < gapFromAnotherLinkedItem) {
+          newCenterForMovingItem = Math.min(newCenterForMovingItem ?? Number.MAX_SAFE_INTEGER, linkedStandingItem.visualState.getVCenter());
+        }
+      }
+    });
+
+    // links from standing item to moving item
+    (invertedLinksOfStandingItems[movingItem.value.id] ?? []).forEach(standingItem => {
+
+      const verticalGap = Math.abs(movingItem.visualState.getVCenter() - standingItem.visualState.getVCenter());
+
+      if (verticalGap < 100) {
+        const gapFromAnotherLinkedItem = Math.abs(movingItem.visualState.getVCenter() - (newCenterForMovingItem ?? Number.MAX_SAFE_INTEGER));
+
+        if (verticalGap < gapFromAnotherLinkedItem) {
+          newCenterForMovingItem = Math.min(newCenterForMovingItem ?? Number.MAX_SAFE_INTEGER, standingItem.visualState.getVCenter());
+        }
+      }
+    });
+
+    if (newCenterForMovingItem) {
+      movingItem.visualState.setVCenter(newCenterForMovingItem);
+    }
+
+  });
+
 }
 
 type DesignerAction =
@@ -155,6 +272,8 @@ const DesignerReducer = (state: DesignerState, action: DesignerAction): Designer
 
       if (!canceled) {
         placeItemsInHorizontalLine(moving);
+
+        placeItemsInVerticalLine(moving, remaining);
       }
 
       moving.forEach(i => {
@@ -208,13 +327,50 @@ const DesignerReducer = (state: DesignerState, action: DesignerAction): Designer
   }
 }
 
-class DesignerDispatchers {
+function useDesignerReducer(initialItems: ItemModel[]) {
+  const [designerState, dispatch] = useReducer(DesignerReducer, { items: initialItems });
 
+  const unselectAll = useCallback(() =>
+    dispatch({ type: 'unselect-all' })
+    , []);
+
+  const handleItemsDragging = useCallback((shiftX: number, shiftY: number) =>
+    dispatch({ type: 'handle-items-dragging', shiftX, shiftY })
+    , []);
+
+  const handleItemsDraggingEnded = useCallback((canceled: boolean) =>
+    dispatch({ type: 'handle-items-dragging-ended', canceled })
+    , []);
+
+  const revertItemSelection = useCallback((item: ItemModel, setSelectionTo: boolean, ctrl: boolean) =>
+    dispatch({ type: 'revert-item-selection', item, setSelectionTo: true, ctrl: ctrl })
+    , []);
+
+  const handleSelectingRectangleDrawn = useCallback(
+    (selectionLocation: { top: number, left: number, bottom: number, right: number }) =>
+      dispatch({ type: 'handle-selecting-rectangle-drawn', selectionLocation })
+    , []);
+
+  return {
+    designerState,
+    unselectAll,
+    handleItemsDragging,
+    handleItemsDraggingEnded,
+    revertItemSelection,
+    handleSelectingRectangleDrawn
+  };
 }
 
 export function Designer() {
 
-  const [state, dispatch] = useReducer(DesignerReducer, { items: initialItems })
+  const {
+    designerState,
+    unselectAll,
+    handleItemsDragging,
+    handleItemsDraggingEnded,
+    revertItemSelection,
+    handleSelectingRectangleDrawn
+  } = useDesignerReducer(initialItems);
 
   const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
 
@@ -227,21 +383,9 @@ export function Designer() {
       yInViewPort: event.clientY
     });
 
-    dispatch({ type: 'unselect-all' });
+    unselectAll();
 
-  }, []);
-
-  const handleItemsDragging = useCallback((shiftX: number, shiftY: number) => {
-
-    dispatch({ type: 'handle-items-dragging', shiftX, shiftY });
-
-  }, []);
-
-  const handleItemDraggingEnded = useCallback((canceled) => {
-
-    dispatch({ type: 'handle-items-dragging-ended', canceled })
-
-  }, []);
+  }, [unselectAll]);
 
   const mouseDragContext = useContext(MouseDragContext);
 
@@ -252,7 +396,7 @@ export function Designer() {
         const isItemSelectedBeforeClick = item.visualState.selected;
 
         if (!isItemSelectedBeforeClick) {
-          dispatch({ type: 'revert-item-selection', item, setSelectionTo: true, ctrl: ctrl });
+          revertItemSelection(item, true, ctrl);
         }
 
         mouseDragContext.startDragging(relativeY, relativeY, clientX, clientY, {
@@ -266,33 +410,25 @@ export function Designer() {
 
             if (canceled) {
 
-              if (!ctrl && isItemSelectedBeforeClick && state.items.filter(i => i.visualState.selected).length > 1) {
+              if (!ctrl && isItemSelectedBeforeClick && designerState.items.filter(i => i.visualState.selected).length > 1) {
                 // there are other selected items and we click a selected one
                 // in this case (I think) we keep only clicked one selected
                 // instead of making them all unselected
                 // I just feel like this :)
-                // revertItemSelection(item, true, false);
-                dispatch({ type: 'revert-item-selection', item, setSelectionTo: true, ctrl: false })
-
+                revertItemSelection(item, true, false);
               }
               else {
-                dispatch({ type: 'revert-item-selection', item, setSelectionTo: !isItemSelectedBeforeClick, ctrl: ctrl });
+                revertItemSelection(item, !isItemSelectedBeforeClick, ctrl);
               }
             }
 
-            handleItemDraggingEnded(canceled);
+            handleItemsDraggingEnded(canceled);
           }
         });
 
-      }, [handleItemDraggingEnded, handleItemsDragging, mouseDragContext, state.items]);
+      }, [handleItemsDraggingEnded, handleItemsDragging, revertItemSelection, mouseDragContext, designerState.items]);
 
-  const handleSelectingRectangleDrawn = (selectionLocation: { top: number, left: number, bottom: number, right: number }) => {
-
-    dispatch({ type: 'handle-selecting-rectangle-drawn', selectionLocation });
-    
-  };
-
-  const links = useCallback(() => getLinks(state.items), [state.items]);
+  const links = useCallback(() => getLinks(designerState.items), [designerState.items]);
 
   return (
 
@@ -312,18 +448,18 @@ export function Designer() {
             <button>Save</button>
           </div>
         </div>
-        <div id="content" className="content" onMouseDown={handleMouseDown} >
+        <div id="designer-container" className="designer-container" onMouseDown={handleMouseDown} >
 
           {/* this (positon:relative) div is for providing 
           an immediate non static parent for absolute positioned children*/}
-          <div className="designer-container">
+          <div className="designer-relative-container">
 
             {
               links().map(link => <Link linkModel={link} key={link.id} />)
             }
 
             {
-              state.items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
+              designerState.items.map(item => <Item key={item.value.id} itemModel={item} onClicked={handleItemClicked} />)
             }
 
             <SelectingRectangle

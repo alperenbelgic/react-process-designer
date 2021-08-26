@@ -23,7 +23,7 @@
   width: 300px;
 }
 
-.content{
+.designer-container{
   width: 100%; 
   overflow: auto;
 
@@ -33,7 +33,7 @@
   background-attachment: local;
 }
 
-.designer-container{
+.designer-relative-container{
   position: relative;
   background-color: coral;
 }

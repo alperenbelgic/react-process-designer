@@ -1,0 +1,7 @@
+ - Pool & lanes
+ - add new item
+ - joints on connectors
+
+- wrap antd controls by passing params as spreads
+- gateways - exclusive, inclusive, paralel
+- start and end items of the process.

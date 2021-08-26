@@ -1,13 +1,31 @@
 
 .item{
   position: absolute;
-  background-color: green;
-
   user-select: none; 
 
-  border: 3px solid;
+
 
   border-color: transparent;
   
   border-radius: 8px;
+}
+
+.item-content{
+  border: 2px solid;
+  border-radius: 8px;
+}
+
+.activity-item{
+  background-color: cadetblue;
+}
+
+
+
+.joint-item{
+  background-color: darkolivegreen;
+  border-radius: 20px;
+}
+
+.joint-item .item-content{
+  border-radius: 20px;
 }

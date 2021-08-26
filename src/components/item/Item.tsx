@@ -7,10 +7,27 @@ interface Props {
   onClicked: (item: ItemModel, relativeX: number, relativeY: number, clientX: number, clientY: number, ctrl: boolean) => void
 }
 
+type ItemType = 'Activity' | 'Joint'
+
 export interface ItemModel {
   visualState: ItemVisualState;
-
+  itemType: ItemType;
   value: ItemValue;
+}
+
+type ItemValue = ActivityItemValue | JointItemValue;
+
+export interface BaseItemValue {
+  id: string;
+  linkedItems: string[];
+}
+
+export interface ActivityItemValue extends BaseItemValue {
+
+}
+
+export interface JointItemValue extends BaseItemValue {
+
 }
 
 export class ItemVisualState {
@@ -44,17 +61,15 @@ export class ItemVisualState {
 
   defaultWidth = 200;
   defaultHeight = 100;
+
+  getVCenter(): number { return this.left + this.defaultWidth / 2; }
+  setVCenter(vCenter: number) { this.left = vCenter - this.defaultWidth / 2; }
 }
 
-export interface ItemValue {
-  id: string;
-  linkedItems: string[];
-}
 
 function _Item({ itemModel, onClicked }: Props) {
 
   const handleMouseDown = useCallback((event: any) => {
-
     event.stopPropagation();
 
     const rect = event.target.getBoundingClientRect();
@@ -69,18 +84,24 @@ function _Item({ itemModel, onClicked }: Props) {
   }, [itemModel, onClicked]);
 
   return (
-    <div className="item"
+    <div className={'item ' + (itemModel.itemType === 'Joint' ? 'joint-item' : 'activity-item')}
       onMouseDown={handleMouseDown}
       style={{
         left: itemModel.visualState.left,
         top: itemModel.visualState.top,
         width: itemModel.visualState.defaultWidth,
         height: itemModel.visualState.defaultHeight,
-        borderColor: itemModel.visualState.selected ? 'black' : 'transparent'
       }}
     >
-      <div>
-        {itemModel.value.id} - {itemModel.visualState.selected ? 'true' : 'false'} {itemModel.visualState.left} - {itemModel.visualState.top} - {itemModel.visualState.xShift} - {itemModel.visualState.yShift} -
+      <div
+        className="item-content"
+        style={{
+          borderColor: itemModel.visualState.selected ? 'black' : 'transparent',
+          width: itemModel.visualState.defaultWidth - 4,
+          height: itemModel.visualState.defaultHeight - 4,
+
+        }} >
+        {itemModel.value.id}
       </div>
 
       <ContextMenu />

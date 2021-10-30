@@ -1,5 +1,6 @@
 import React from 'react';
 import { ItemModel } from '../item/Item';
+import { LinkContextMenu } from './link-context-menu/LinkContextMenu';
 import './Link.css'
 
 export interface Point {
@@ -11,10 +12,13 @@ export interface LinkModel {
   start: Point;
   end: Point;
   id?: string;
+  startItem: ItemModel;
+  endItem: ItemModel;
 }
 
 interface Props {
   linkModel: LinkModel;
+  addJoint: (linkModel: LinkModel) => void;
 }
 
 function getCenter(linkModel: LinkModel): Point {
@@ -45,8 +49,8 @@ function arctan(linkModel: LinkModel) {
 
 const getCenterOfItem = (item: ItemModel): Point => {
   return {
-    x: item.visualState.left + item.visualState.defaultWidth / 2,
-    y: item.visualState.top + item.visualState.defaultHeight / 2
+    x: item.visualState.getVCenter(),
+    y: item.visualState.getHCenter()
   };
 }
 
@@ -72,7 +76,9 @@ export const getLinks = (items: ItemModel[]): LinkModel[] => {
       linkModels.push({
         start: firstItemsCenter,
         end: secondItemsCenter,
-        id: item.value.id + '_' + toItem.value.id
+        id: item.value.id + '_' + toItem.value.id,
+        startItem: item,
+        endItem: toItem
       });
     });
   })
@@ -94,109 +100,12 @@ function getLinkProperties(props: { linkModel: LinkModel }) {
 
 }
 
-function _Link({ linkModel }: Props) {
+function _Link({ linkModel, addJoint }: Props) {
 
   const linkProps = getLinkProperties({ linkModel });
 
-
-  // const [tempJointStyle, setTempJointStyle] = useState<null | { left: number, top: number, width: number, height: number, display: string }>(null);
-  // const tempJointActive = (tempJointStyle !== null);
-  // const [tempJointCreating, setTempJointCreating] = useState(false);
-
-  // let tempLink1Props = null;
-  // let tempLink2Props = null;
-
-  // if (tempJointStyle && tempJointCreating) {
-
-  //   tempLink1Props = getLinkProperties({
-  //     linkModel: {
-  //       start: linkModel.start,
-  //       end: {
-  //         x: (tempJointStyle.left + tempJointStyle.width / 2),
-  //         y: (tempJointStyle.top + tempJointStyle.height / 2)
-  //       } as Point,
-  //     } as LinkModel
-  //   });
-
-  //   tempLink2Props = getLinkProperties({
-  //     linkModel: {
-  //       start: {
-  //         x: (tempJointStyle.left + tempJointStyle.width / 2),
-  //         y: (tempJointStyle.top + tempJointStyle.height / 2)
-  //       } as Point,
-  //       end: linkModel.end,
-  //     } as LinkModel
-  //   });
-  // }
-
-  // const handleMouseMove = useCallback((event: any) => {
-  //   if (tempJointActive) {
-
-  //     const isMouseOnLink = () => document.elementsFromPoint(event.clientX, event.clientY).some(e => e.id === linkModel.id);
-
-  //     if (tempJointCreating || isMouseOnLink()) {
-  //       var rect = document.getElementById('designer-container')?.getBoundingClientRect() as any;
-  //       const width = 30;
-  //       const height = 30;
-  //       const left = event.clientX - rect.left - width / 2;
-  //       const top = event.clientY - rect.top - height / 2;
-  //       setTempJointStyle(prev => {
-
-  //         // UI is hard innit?
-  //         if (prev == null) return null;
-
-  //         return { left, top, width: 30, height: 30, display: 'absolute' };
-  //       });
-  //     }
-  //     else {
-  //       setTempJointStyle(null);
-  //       setTempJointCreating(false);
-  //     }
-  //   }
-
-  // }, [tempJointActive, linkModel.id, tempJointCreating]);
-
-  // useEffect(() => {
-  //   if (tempJointActive) {
-  //     document.addEventListener("mousemove", handleMouseMove);
-  //   }
-  //   else {
-  //     document.removeEventListener("mousemove", handleMouseMove);
-  //   }
-
-  //   return () => {
-  //     document.removeEventListener("mousemove", handleMouseMove);
-  //   };
-
-  // }, [handleMouseMove, tempJointActive]);
-
-  // const onMouseEnter = useCallback((event: any) => {
-  //   var rect = document.getElementById('designer-container')?.getBoundingClientRect() as any;
-  //   const width = 30;
-  //   const height = 30;
-  //   const left = event.clientX - rect.left - width / 2;
-  //   const top = event.clientY - rect.top - height / 2;
-
-  //   setTempJointStyle({ left, top, width, height, display: 'absolute' });
-
-  // }, []);
-
-  // const onMouseDown = useCallback((event: any) => {
-  //   setTempJointCreating(true);
-  //   event.stopPropagation();
-  // }, []);
-
-  // const onMouseUp = useCallback((event: MouseEvent<HTMLDivElement>) => {
-
-  //   setTempJointCreating(false);
-  //   setTempJointStyle(null);
-
-  //   event.stopPropagation();
-  // }, []);
-
   return <>
-
-    {
+    <LinkContextMenu linkModel={linkModel} addJoint={addJoint} >
       <div
         className="link"
         id={linkModel.id}
@@ -204,39 +113,8 @@ function _Link({ linkModel }: Props) {
       >
         <div>^</div>
       </div>
-    }
-{/* 
-    {
-      tempJointCreating &&
-      <>
-        <div
-          className="link"
-          id="tempLink1"
-          style={{ ...tempLink1Props }}
-          onMouseEnter={onMouseEnter}
-        >
-        </div>
+    </LinkContextMenu>
 
-        <div
-          className="link"
-          id="tempLink2"
-          style={{ ...tempLink2Props }}
-          onMouseEnter={onMouseEnter}
-        >
-
-        </div>
-
-      </>
-    }
-
-    {tempJointActive &&
-      <div className="temp-joint"
-        style={{ ...tempJointStyle }}
-        onMouseUp={onMouseUp}
-        onMouseDown={onMouseDown}
-
-      ></div>
-    } */}
 
   </>
 }

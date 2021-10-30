@@ -28,6 +28,17 @@ export interface ActivityItemValue extends BaseItemValue {
 
 export interface JointItemValue extends BaseItemValue {
 
+  // // Joints are intermediate items
+  // // fromActualItemId and toActualItemId point non intermediate items 
+  // // that wrap the joint (or multiple joints)
+  // // these are used to know how logical flow continues
+  // fromActualItemId: string;
+  // toActualItemId: string;
+
+  // // these can be intermediate or non intermediate items
+  // // these are used to know how visual flow continues
+  // fromPhysicalItemId: string;
+  // toPhysicalItemId: string;
 }
 
 export class ItemVisualState {
@@ -64,6 +75,21 @@ export class ItemVisualState {
 
   getVCenter(): number { return this.left + this.defaultWidth / 2; }
   setVCenter(vCenter: number) { this.left = vCenter - this.defaultWidth / 2; }
+
+  getHCenter(): number { return this.top + this.defaultHeight / 2; }
+  setHCenter(hCenter: number) { this.top = hCenter - this.defaultHeight / 2; }
+}
+
+export class ActivityVisualState extends ItemVisualState {
+
+}
+
+export class JointVisualState extends ItemVisualState {
+  constructor() {
+    super();
+    this.defaultWidth = 30;
+    this.defaultHeight = 30;
+  }
 }
 
 
@@ -97,8 +123,8 @@ function _Item({ itemModel, onClicked }: Props) {
         className="item-content"
         style={{
           borderColor: itemModel.visualState.selected ? 'black' : 'transparent',
-          width: itemModel.visualState.defaultWidth - 4,
-          height: itemModel.visualState.defaultHeight - 4,
+          width: itemModel.visualState.defaultWidth,
+          height: itemModel.visualState.defaultHeight,
 
         }} >
         {itemModel.value.id}

@@ -1,14 +1,15 @@
-import { MouseEvent, useCallback, useContext, useReducer, useState } from 'react';
 import './Designer.css'
-import { Item, ItemModel, ItemVisualState } from '../item/Item'
+import { MouseEvent, useCallback, useContext, useReducer, useState } from 'react';
+import { ActivityVisualState, Item, ItemModel, ItemVisualState, JointVisualState } from '../item/Item'
 import { DesignerClickedEventArgs, SelectingRectangle } from '../selecting-rectangle/SelectingRectangle';
 import { MouseDragContext } from '../../contexts/MouseDragService';
-import { Link, getLinks } from '../link/Link';
+import { Link, getLinks, LinkModel } from '../link/Link';
+import { getUniqueId } from '../../services/getUniqueId';
 
 const initialItems: ItemModel[] = [
   {
     itemType: 'Activity',
-    visualState: Object.assign(new ItemVisualState(),
+    visualState: Object.assign(new ActivityVisualState(),
       {
         left: 30,
         top: 297,
@@ -18,7 +19,7 @@ const initialItems: ItemModel[] = [
   },
   {
     itemType: 'Activity',
-    visualState: Object.assign(new ItemVisualState(),
+    visualState: Object.assign(new ActivityVisualState(),
       {
         left: 330,
         top: 297,
@@ -28,7 +29,7 @@ const initialItems: ItemModel[] = [
   },
   {
     itemType: 'Activity',
-    visualState: Object.assign(new ItemVisualState(),
+    visualState: Object.assign(new ActivityVisualState(),
       {
         left: 630,
         top: 297,
@@ -38,7 +39,7 @@ const initialItems: ItemModel[] = [
   },
   {
     itemType: 'Joint',
-    visualState: Object.assign(new ItemVisualState(),
+    visualState: Object.assign(new JointVisualState(),
       {
         left: 715,
         top: 191,
@@ -50,7 +51,7 @@ const initialItems: ItemModel[] = [
   },
   {
     itemType: 'Joint',
-    visualState: Object.assign(new ItemVisualState(),
+    visualState: Object.assign(new JointVisualState(),
       {
         left: 115,
         top: 191,
@@ -61,6 +62,17 @@ const initialItems: ItemModel[] = [
     value: { id: '5', linkedItems: ['1'] }
   },
 ];
+
+function getItemsInMap(items: ItemModel[]): { [key: string]: ItemModel } {
+
+  const map: { [key: string]: ItemModel } = {}
+
+  items.forEach(item => {
+    map[item.value.id] = item;
+  });
+
+  return map;
+}
 
 function itemsLeftView(items: ItemModel[]) {
   return items.some(i => i.visualState.left < 0 || i.visualState.top < 0);
@@ -178,9 +190,11 @@ type DesignerAction =
   | { type: 'handle-items-dragging', shiftX: number, shiftY: number }
   | { type: 'handle-items-dragging-ended', canceled: boolean }
   | { type: 'handle-selecting-rectangle-drawn', selectionLocation: { top: number, left: number, bottom: number, right: number } }
+  | { type: 'add-joint', linkModel: LinkModel }
 
 interface DesignerState {
   items: ItemModel[];
+
 }
 
 const DesignerReducer = (state: DesignerState, action: DesignerAction): DesignerState => {
@@ -324,6 +338,41 @@ const DesignerReducer = (state: DesignerState, action: DesignerAction): Designer
 
       return { ...state, items: _remainingItems };
     }
+    case 'add-joint': {
+      const linkModel = action.linkModel;
+
+      const startItem = linkModel.startItem;
+      const endItem = linkModel.endItem;
+
+      const jointVCenter = startItem.visualState.getVCenter() / 2 + endItem.visualState.getVCenter() / 2;
+      const jointHCenter = startItem.visualState.getHCenter() / 2 + endItem.visualState.getHCenter() / 2;
+
+      let jointVisualState = new JointVisualState();
+      jointVisualState.setVCenter(jointVCenter);
+      jointVisualState.setHCenter(jointHCenter);
+
+      const jointItem: ItemModel = {
+        itemType: 'Joint',
+        value: { id: getUniqueId(), linkedItems: [endItem.value.id] },
+        visualState: jointVisualState
+      };
+
+      // start item removes end item from linked items
+      startItem.value.linkedItems = startItem.value.linkedItems.filter(li => li !== endItem.value.id);
+      startItem.value.linkedItems.push(jointItem.value.id);
+      const newStartItem: ItemModel = {
+        ...startItem,
+        value: { ...startItem.value },
+      }
+
+      const newItemList = state.items.filter(i => i.value.id !== startItem.value.id && i.value.id !== endItem.value.id);
+
+      newItemList.push(newStartItem);
+      newItemList.push(endItem);
+      newItemList.push(jointItem);
+
+      return { ...state, items: newItemList };
+    }
   }
 }
 
@@ -351,13 +400,18 @@ function useDesignerReducer(initialItems: ItemModel[]) {
       dispatch({ type: 'handle-selecting-rectangle-drawn', selectionLocation })
     , []);
 
+  const addJoint = useCallback((linkModel: LinkModel) => {
+    dispatch({ type: 'add-joint', linkModel });
+  }, [])
+
   return {
     designerState,
     unselectAll,
     handleItemsDragging,
     handleItemsDraggingEnded,
     revertItemSelection,
-    handleSelectingRectangleDrawn
+    handleSelectingRectangleDrawn, 
+    addJoint
   };
 }
 
@@ -369,7 +423,8 @@ export function Designer() {
     handleItemsDragging,
     handleItemsDraggingEnded,
     revertItemSelection,
-    handleSelectingRectangleDrawn
+    handleSelectingRectangleDrawn, 
+    addJoint
   } = useDesignerReducer(initialItems);
 
   const [designerClickedEvent, setDesignerClickedEvent] = useState<DesignerClickedEventArgs | null>(null);
@@ -455,7 +510,7 @@ export function Designer() {
           <div className="designer-relative-container">
 
             {
-              links().map(link => <Link linkModel={link} key={link.id} />)
+              links().map(link => <Link linkModel={link} key={link.id} addJoint={addJoint} />)
             }
 
             {

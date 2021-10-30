@@ -1,6 +1,7 @@
+ - joints on connectors
+    - when joint created, auto place horizontally
  - Pool & lanes
  - add new item
- - joints on connectors
 
 - wrap antd controls by passing params as spreads
 - gateways - exclusive, inclusive, paralel

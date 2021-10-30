@@ -10,6 +10,7 @@
     "@types/node": "^12.20.19",
     "@types/react": "^17.0.16",
     "@types/react-dom": "^17.0.9",
+    "antd": "^4.16.13",
     "immer": "^9.0.5",
     "nanoid": "^3.1.25",
     "react": "^17.0.2",
